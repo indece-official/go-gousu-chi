@@ -58,6 +58,14 @@ func (c *AbstractController) UseRouter(router chi.Router) {
 	c.router = router
 }
 
+func (c *AbstractController) UsePort(port int) {
+	c.port = port
+}
+
+func (c *AbstractController) UseHost(host string) {
+	c.host = host
+}
+
 func (c *AbstractController) WithExtra(r *http.Request, key string, value interface{}) *http.Request {
 	ctx := r.Context()
 
@@ -159,15 +167,13 @@ func (c *AbstractController) Stop() error {
 }
 
 func NewAbstractController(
-	host string,
-	port int,
 	log *gousu.Log,
 ) *AbstractController {
 	return &AbstractController{
 		router:               chi.NewRouter(),
 		log:                  log,
 		regexpSanitizeString: regexp.MustCompile(`[\n\t\"\']+`),
-		host:                 host,
-		port:                 port,
+		host:                 "",
+		port:                 0,
 	}
 }
