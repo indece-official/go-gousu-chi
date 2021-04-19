@@ -8,8 +8,9 @@ import (
 )
 
 type IResponse interface {
+	GetRequest() *http.Request
 	Write(w http.ResponseWriter) IResponse
-	Log(req *http.Request, log *gousu.Log)
+	Log(log *gousu.Log)
 }
 
 type ContentType string
@@ -20,6 +21,7 @@ const (
 )
 
 type Response struct {
+	Request         *http.Request
 	StatusCode      int
 	Header          http.Header
 	ContentType     ContentType
@@ -30,6 +32,10 @@ type Response struct {
 
 var _ IResponse = (*Response)(nil)
 
+func (r *Response) GetRequest() *http.Request {
+	return r.Request
+}
+
 func (r *Response) Write(w http.ResponseWriter) IResponse {
 	var err error
 	respData := []byte{}
@@ -39,12 +45,12 @@ func (r *Response) Write(w http.ResponseWriter) IResponse {
 		case ContentTypeApplicationJSON:
 			respData, err = json.Marshal(r.Body)
 			if err != nil {
-				return InternalServerError("Can't json encode response: %s", err)
+				return InternalServerError(r.Request, "Can't json encode response: %s", err)
 			}
 		case ContentTypeTextPlain:
 			respDataStr, ok := r.Body.(string)
 			if !ok {
-				return InternalServerError("Response is not of type string")
+				return InternalServerError(r.Request, "Response is not of type string")
 			}
 
 			respData = []byte(respDataStr)
@@ -53,7 +59,7 @@ func (r *Response) Write(w http.ResponseWriter) IResponse {
 
 			respData, ok = r.Body.([]byte)
 			if !ok {
-				return InternalServerError("Response is not of type bytes")
+				return InternalServerError(r.Request, "Response is not of type bytes")
 			}
 		}
 	}
@@ -71,18 +77,19 @@ func (r *Response) Write(w http.ResponseWriter) IResponse {
 	return nil
 }
 
-func (r *Response) Log(req *http.Request, log *gousu.Log) {
+func (r *Response) Log(log *gousu.Log) {
 	message := r.DetailedMessage
 	if message == "" {
 		message = "OK"
 	}
 
-	log.Infof("%s %s - %d %s", req.Method, req.RequestURI, r.StatusCode, message)
+	log.Infof("%s %s - %d %s", r.Request.Method, r.Request.RequestURI, r.StatusCode, message)
 }
 
 // JSON creates a new RestResponse of type application/json
-func JSON(obj interface{}) *Response {
+func JSON(request *http.Request, obj interface{}) *Response {
 	return &Response{
+		Request:     request,
 		StatusCode:  http.StatusOK,
 		ContentType: ContentTypeApplicationJSON,
 		Body:        obj,
@@ -90,8 +97,9 @@ func JSON(obj interface{}) *Response {
 }
 
 // Text creates a new RestResponse of type text/plain
-func Text(obj interface{}) *Response {
+func Text(request *http.Request, obj interface{}) *Response {
 	return &Response{
+		Request:     request,
 		StatusCode:  http.StatusOK,
 		ContentType: ContentTypeTextPlain,
 		Body:        obj,

@@ -25,24 +25,24 @@ type AbstractController struct {
 	error                error
 }
 
-type HandlerFunction func(w http.ResponseWriter, r *http.Request) *Response
+type HandlerFunction func(w http.ResponseWriter, r *http.Request) IResponse
 
 func (c *AbstractController) Wrap(clb HandlerFunction) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := clb(w, r)
 
-		log := c.GetLog(r)
+		log := c.GetLog(resp.GetRequest())
 
 		err := resp.Write(w)
 		if err != nil {
 			err.Write(w)
 
-			err.Log(r, log)
+			err.Log(log)
 
 			return
 		}
 
-		resp.Log(r, log)
+		resp.Log(log)
 	}
 }
 
