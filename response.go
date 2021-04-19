@@ -2,7 +2,6 @@ package gousuchi
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/indece-official/go-gousu"
@@ -34,20 +33,20 @@ func (r *Response) Write(w http.ResponseWriter) *ResponseError {
 		case ResponseTypeJSON:
 			respData, err = json.Marshal(r.Body)
 			if err != nil {
-				return InternalServerError(fmt.Errorf("can't json encode response: %s", err))
+				return InternalServerError("Can't json encode response: %s", err)
 			}
 			contentType = "application/json"
 		case ResponseTypeText:
 			respDataStr, ok := r.Body.(string)
 			if !ok {
-				return InternalServerError(fmt.Errorf("response is not of type string"))
+				return InternalServerError("Response is not of type string")
 			}
 
 			respData = []byte(respDataStr)
 
 			contentType = "text/plain"
 		default:
-			return InternalServerError(fmt.Errorf("unsupported content type '%s'", r.Type))
+			return InternalServerError("Unsupported content type '%s'", r.Type)
 		}
 	}
 

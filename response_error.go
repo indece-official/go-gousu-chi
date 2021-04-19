@@ -26,26 +26,26 @@ func (r *ResponseError) Log(req *http.Request, log *gousu.Log) {
 	}
 }
 
-func InternalServerError(detailedError error) *ResponseError {
+func InternalServerError(detailedMessage string, args ...interface{}) *ResponseError {
 	return &ResponseError{
 		StatusCode:    http.StatusInternalServerError,
 		PublicMessage: "Internal server error",
-		DetailedError: detailedError,
+		DetailedError: fmt.Errorf(detailedMessage, args...),
 	}
 }
 
-func NotFound(detailedError error) *ResponseError {
+func NotFound(detailedMessage string, args ...interface{}) *ResponseError {
 	return &ResponseError{
 		StatusCode:    http.StatusNotFound,
 		PublicMessage: "Not found",
-		DetailedError: detailedError,
+		DetailedError: fmt.Errorf(detailedMessage, args...),
 	}
 }
 
-func BadRequest(detailedError error) *ResponseError {
+func BadRequest(detailedMessage string, args ...interface{}) *ResponseError {
 	return &ResponseError{
 		StatusCode:    http.StatusBadRequest,
 		PublicMessage: "Bad request",
-		DetailedError: detailedError,
+		DetailedError: fmt.Errorf(detailedMessage, args...),
 	}
 }
