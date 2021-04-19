@@ -7,46 +7,54 @@ import (
 	"github.com/indece-official/go-gousu"
 )
 
-type ResponseType string
+type IResponse interface {
+	Write(w http.ResponseWriter) IResponse
+	Log(req *http.Request, log *gousu.Log)
+}
+
+type ContentType string
 
 const (
-	ResponseTypeJSON ResponseType = "json"
-	ResponseTypeText ResponseType = "text"
+	ContentTypeApplicationJSON ContentType = "application/json"
+	ContentTypeTextPlain       ContentType = "text/plain"
 )
 
 type Response struct {
 	StatusCode      int
 	Header          http.Header
-	Type            ResponseType
+	ContentType     ContentType
 	Body            interface{}
 	DetailedMessage string
 	DisableLogging  bool
 }
 
-func (r *Response) Write(w http.ResponseWriter) *ResponseError {
+var _ IResponse = (*Response)(nil)
+
+func (r *Response) Write(w http.ResponseWriter) IResponse {
 	var err error
 	respData := []byte{}
-	contentType := "text/plain"
 
 	if r.Body != nil {
-		switch r.Type {
-		case ResponseTypeJSON:
+		switch r.ContentType {
+		case ContentTypeApplicationJSON:
 			respData, err = json.Marshal(r.Body)
 			if err != nil {
 				return InternalServerError("Can't json encode response: %s", err)
 			}
-			contentType = "application/json"
-		case ResponseTypeText:
+		case ContentTypeTextPlain:
 			respDataStr, ok := r.Body.(string)
 			if !ok {
 				return InternalServerError("Response is not of type string")
 			}
 
 			respData = []byte(respDataStr)
-
-			contentType = "text/plain"
 		default:
-			return InternalServerError("Unsupported content type '%s'", r.Type)
+			var ok bool
+
+			respData, ok = r.Body.([]byte)
+			if !ok {
+				return InternalServerError("Response is not of type bytes")
+			}
 		}
 	}
 
@@ -56,7 +64,7 @@ func (r *Response) Write(w http.ResponseWriter) *ResponseError {
 		}
 	}
 
-	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Type", string(r.ContentType))
 	w.WriteHeader(r.StatusCode)
 	w.Write(respData)
 
@@ -75,17 +83,17 @@ func (r *Response) Log(req *http.Request, log *gousu.Log) {
 // JSON creates a new RestResponse of type application/json
 func JSON(obj interface{}) *Response {
 	return &Response{
-		StatusCode: http.StatusOK,
-		Type:       ResponseTypeJSON,
-		Body:       obj,
+		StatusCode:  http.StatusOK,
+		ContentType: ContentTypeApplicationJSON,
+		Body:        obj,
 	}
 }
 
 // Text creates a new RestResponse of type text/plain
 func Text(obj interface{}) *Response {
 	return &Response{
-		StatusCode: http.StatusOK,
-		Type:       ResponseTypeText,
-		Body:       obj,
+		StatusCode:  http.StatusOK,
+		ContentType: ContentTypeTextPlain,
+		Body:        obj,
 	}
 }

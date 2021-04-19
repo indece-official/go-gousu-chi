@@ -13,9 +13,13 @@ type ResponseError struct {
 	DetailedError error
 }
 
-func (r *ResponseError) Write(w http.ResponseWriter) {
+var _ IResponse = (*ResponseError)(nil)
+
+func (r *ResponseError) Write(w http.ResponseWriter) IResponse {
 	w.WriteHeader(r.StatusCode)
 	fmt.Fprintf(w, r.PublicMessage)
+
+	return nil
 }
 
 func (r *ResponseError) Log(req *http.Request, log *gousu.Log) {
@@ -46,6 +50,22 @@ func BadRequest(detailedMessage string, args ...interface{}) *ResponseError {
 	return &ResponseError{
 		StatusCode:    http.StatusBadRequest,
 		PublicMessage: "Bad request",
+		DetailedError: fmt.Errorf(detailedMessage, args...),
+	}
+}
+
+func Unauthorized(detailedMessage string, args ...interface{}) *ResponseError {
+	return &ResponseError{
+		StatusCode:    http.StatusUnauthorized,
+		PublicMessage: "Unauthorized",
+		DetailedError: fmt.Errorf(detailedMessage, args...),
+	}
+}
+
+func Forbidden(detailedMessage string, args ...interface{}) *ResponseError {
+	return &ResponseError{
+		StatusCode:    http.StatusForbidden,
+		PublicMessage: "Forbidden",
 		DetailedError: fmt.Errorf(detailedMessage, args...),
 	}
 }
