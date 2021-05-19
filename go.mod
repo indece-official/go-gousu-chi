@@ -6,4 +6,5 @@ require (
 	github.com/go-chi/chi/v5 v5.0.2 // indirect
 	github.com/indece-official/go-gousu v1.1.0 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
+	gopkg.in/guregu/null.v4 v4.0.0 // indirect
 )

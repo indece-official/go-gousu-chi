@@ -2,6 +2,7 @@ package gousuchi
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -44,6 +45,18 @@ var _ IResponse = (*Response)(nil)
 
 func (r *Response) GetRequest() *http.Request {
 	return r.Request
+}
+
+func (r *Response) WithDetailedMessage(detailedMessage string, args ...interface{}) *Response {
+	r.DetailedMessage = fmt.Sprintf(detailedMessage, args...)
+
+	return r
+}
+
+func (r *Response) WithStatusCode(statusCode int) *Response {
+	r.StatusCode = statusCode
+
+	return r
 }
 
 func (r *Response) Write(w http.ResponseWriter) IResponse {
