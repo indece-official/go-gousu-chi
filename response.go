@@ -2,6 +2,7 @@ package gousuchi
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/indece-official/go-gousu"
@@ -16,16 +17,25 @@ type IResponse interface {
 type ContentType string
 
 const (
-	ContentTypeApplicationJSON ContentType = "application/json"
-	ContentTypeTextPlain       ContentType = "text/plain"
+	ContentTypeApplicationJSON        ContentType = "application/json"
+	ContentTypeApplicationOctetStream ContentType = "application/octet-stream"
+	ContentTypeApplicationPDF         ContentType = "application/pdf"
+	ContentTypeTextPlain              ContentType = "text/plain"
+	ContentTypeTextHTML               ContentType = "text/html"
+	ContentTypeTextCSV                ContentType = "text/csv"
+	ContentTypeImagePNG               ContentType = "image/png"
+	ContentTypeImageJPEG              ContentType = "image/jpeg"
+	ContentTypeImageBMP               ContentType = "image/bmp"
 )
 
 type Response struct {
+	responseError   *ResponseError
 	Request         *http.Request
 	StatusCode      int
 	Header          http.Header
 	ContentType     ContentType
-	Body            interface{}
+	Body            []byte
+	BodyReader      io.Reader
 	DetailedMessage string
 	DisableLogging  bool
 }
@@ -37,31 +47,8 @@ func (r *Response) GetRequest() *http.Request {
 }
 
 func (r *Response) Write(w http.ResponseWriter) IResponse {
-	var err error
-	respData := []byte{}
-
-	if r.Body != nil {
-		switch r.ContentType {
-		case ContentTypeApplicationJSON:
-			respData, err = json.Marshal(r.Body)
-			if err != nil {
-				return InternalServerError(r.Request, "Can't json encode response: %s", err)
-			}
-		case ContentTypeTextPlain:
-			respDataStr, ok := r.Body.(string)
-			if !ok {
-				return InternalServerError(r.Request, "Response is not of type string")
-			}
-
-			respData = []byte(respDataStr)
-		default:
-			var ok bool
-
-			respData, ok = r.Body.([]byte)
-			if !ok {
-				return InternalServerError(r.Request, "Response is not of type bytes")
-			}
-		}
+	if r.responseError != nil {
+		return r.responseError
 	}
 
 	if r.Header != nil {
@@ -72,7 +59,12 @@ func (r *Response) Write(w http.ResponseWriter) IResponse {
 
 	w.Header().Set("Content-Type", string(r.ContentType))
 	w.WriteHeader(r.StatusCode)
-	w.Write(respData)
+
+	if r.BodyReader != nil {
+		io.Copy(w, r.BodyReader)
+	} else {
+		w.Write(r.Body)
+	}
 
 	return nil
 }
@@ -86,22 +78,68 @@ func (r *Response) Log(log *gousu.Log) {
 	log.Infof("%s %s - %d %s", r.Request.Method, r.Request.RequestURI, r.StatusCode, message)
 }
 
+func NewResponse(
+	request *http.Request,
+	statusCode int,
+	contentType ContentType,
+	body []byte,
+) *Response {
+	return &Response{
+		Request:     request,
+		StatusCode:  statusCode,
+		ContentType: contentType,
+		Body:        body,
+	}
+}
+
+func NewStreamResponse(
+	request *http.Request,
+	statusCode int,
+	contentType ContentType,
+	bodyReader io.Reader,
+) *Response {
+	return &Response{
+		Request:     request,
+		StatusCode:  statusCode,
+		ContentType: contentType,
+		BodyReader:  bodyReader,
+	}
+}
+
 // JSON creates a new RestResponse of type application/json
 func JSON(request *http.Request, obj interface{}) *Response {
+	body, err := json.Marshal(obj)
+	if err != nil {
+		return &Response{
+			Request:       request,
+			responseError: InternalServerError(request, "Can't json encode response: %s", err),
+		}
+	}
+
 	return &Response{
 		Request:     request,
 		StatusCode:  http.StatusOK,
 		ContentType: ContentTypeApplicationJSON,
-		Body:        obj,
+		Body:        body,
 	}
 }
 
 // Text creates a new RestResponse of type text/plain
-func Text(request *http.Request, obj interface{}) *Response {
+func Text(request *http.Request, body string) *Response {
 	return &Response{
 		Request:     request,
 		StatusCode:  http.StatusOK,
 		ContentType: ContentTypeTextPlain,
-		Body:        obj,
+		Body:        []byte(body),
+	}
+}
+
+// HTML creates a new RestResponse of type text/html
+func HTML(request *http.Request, body string) *Response {
+	return &Response{
+		Request:     request,
+		StatusCode:  http.StatusOK,
+		ContentType: ContentTypeTextHTML,
+		Body:        []byte(body),
 	}
 }

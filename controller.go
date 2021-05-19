@@ -2,6 +2,7 @@ package gousuchi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -128,9 +129,11 @@ func (c *AbstractController) Start() error {
 
 		err := c.server.ListenAndServe()
 		if err != nil {
-			c.error = err
+			if !errors.Is(err, http.ErrServerClosed) {
+				c.error = err
 
-			c.log.Errorf("Can't start server: %s", err)
+				c.log.Errorf("Can't start server: %s", err)
+			}
 
 			c.server = nil
 		}
