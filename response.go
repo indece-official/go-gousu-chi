@@ -59,6 +59,16 @@ func (r *Response) WithStatusCode(statusCode int) *Response {
 	return r
 }
 
+func (r *Response) WithHeader(key string, value string) *Response {
+	if r.Header == nil {
+		r.Header = http.Header{}
+	}
+
+	r.Header.Add(key, value)
+
+	return r
+}
+
 func (r *Response) Write(w http.ResponseWriter) IResponse {
 	if r.responseError != nil {
 		return r.responseError
