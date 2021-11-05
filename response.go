@@ -59,6 +59,12 @@ func (r *Response) WithStatusCode(statusCode int) *Response {
 	return r
 }
 
+func (r *Response) WithoutLogging() *Response {
+	r.DisableLogging = true
+
+	return r
+}
+
 func (r *Response) WithHeader(key string, value string) *Response {
 	if r.Header == nil {
 		r.Header = http.Header{}
@@ -93,6 +99,10 @@ func (r *Response) Write(w http.ResponseWriter) IResponse {
 }
 
 func (r *Response) Log(log *gousu.Log) {
+	if r.DisableLogging {
+		return
+	}
+
 	message := r.DetailedMessage
 	if message == "" {
 		message = "OK"
